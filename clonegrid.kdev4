@@ -1,0 +1,4 @@
+[Project]
+Name=clonegrid
+Manager=KDevCMakeManager
+VersionControl=kdevgit
