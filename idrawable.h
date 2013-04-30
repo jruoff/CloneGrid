@@ -24,31 +24,15 @@
  */
 
 
-#include "environment_2d.h"
-#include "clone_grid.h"
-#include <iostream>
+#ifndef IDRAWABLE_H
+#define IDRAWABLE_H
 
-int main(int argc, char **argv)
+class IDrawable
 {
-	std::cout << "CloneGrid\n"
-	"Copyright (c) 2013, Jasper Ruoff <jruoff@gmail.com>\n"
-	"All rights reserved.\n\n";
+public:
+	virtual void draw(double scale) = 0;
+	virtual double size() = 0;
+	virtual ~IDrawable() {}
+};
 
-	Environment2D::init(argc, argv);
-
-	if (argc <= 1) {
-		std::cout << "Usage: " << argv[0] << " <path> [<path2> ...]\n";
-		return 0;
-	}
-
-	CloneGrid grid;
-	for (int i = 1; i < argc; i++)
-		grid.read_source(argv[i]);
-	grid.finalize();
-	grid.print_statistics();
-
-	Environment2D::set_drawable(&grid);
-	Environment2D::start();
-
-	return 0;
-}
+#endif // IDRAWABLE_H
