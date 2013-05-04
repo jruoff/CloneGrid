@@ -34,10 +34,11 @@
 class CloneGrid : public virtual IDrawable
 {
 public:
-	CloneGrid(int runs = 4) : m_lines(LineCompare(runs)), m_size(0), m_bytes(0), m_runs(runs) {}
+	CloneGrid(int runs = 4) : m_lines(LineCompare(runs)), m_runs(runs) {}
 	virtual ~CloneGrid();
 	
 	// Implement IDrawable
+	virtual void setup();
 	virtual void draw(double scale);
 	virtual double size() { return m_size; }
 	
@@ -87,9 +88,13 @@ private:
 	LineMap m_lines;
 	LineGroups m_duplicates;
 	
-	int m_size;
-	int m_bytes;
+	int m_size  = 0;
+	int m_bytes = 0;
 	int m_runs;
+	int m_clones = 0;
+	int m_lcount = 0;
+	
+	unsigned int vboId[2];
 	
 	void read_lines(const boost::filesystem::path &path);
 };

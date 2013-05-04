@@ -183,5 +183,7 @@ void Environment2D::start()
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 
+	s_drawable->setup();
+	
 	glutMainLoop();
 }
