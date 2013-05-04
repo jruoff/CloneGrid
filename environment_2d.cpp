@@ -28,6 +28,9 @@
 
 #include <GL/glut.h>
 #include <algorithm>
+//#include <time.h>
+#include <iostream>
+#include <chrono>
 
 static IDrawable *s_drawable;
 
@@ -64,6 +67,10 @@ static void reshape(int width, int height)
 
 static void display()
 {
+	typedef std::chrono::high_resolution_clock Clock;
+	typedef std::chrono::nanoseconds nanoseconds;
+	Clock::time_point t0 = Clock::now();
+	
 	glClear(GL_COLOR_BUFFER_BIT);
 
 
@@ -100,6 +107,10 @@ static void display()
 
 
 	glutSwapBuffers();
+	
+	Clock::time_point t1 = Clock::now();
+	nanoseconds ms = std::chrono::duration_cast<nanoseconds>(t1 - t0);
+	std::cout << ms.count() << " ns\n";
 }
 
 static void keyboard(unsigned char key, int x, int y)
