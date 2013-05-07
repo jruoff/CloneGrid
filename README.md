@@ -1,7 +1,7 @@
 CloneGrid
 =========
 
-CloneGrid is a intuitive tool for finding and analyzing code clones. Code clones are snippets of source code that are very similar to each other and in most cases are the result of a *copy-past-edit* style of programming. CloneGrid makes a visual representation of the code base under review, in this grid like representation code clones can be spotted easily.
+CloneGrid is an intuitive tool for finding and analyzing code clones. Code clones are snippets of source code that are very similar to each other and in most cases are the result of a *copy-past-edit* style of programming. CloneGrid makes a visual representation of the code base under review, in this grid like representation code clones can be spotted easily.
 
 ![CloneGrid featuring Jenkins](img/jenkins.png)
 
