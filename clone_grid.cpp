@@ -86,23 +86,18 @@ void CloneGrid::print_statistics()
 	std::cout << "Total LOC:   " << m_size << "\n";
 	std::cout << "Total files: " << m_files.size() << "\n\n";
 	
-	std::cout << "Top-10 Biggest files:\n";
+	std::size_t n = std::min(std::size_t(10), m_files.size());
+	std::cout << "Top-" << n << " biggest files:\n";
 	
-	auto compare = [] (SourceFile *a, SourceFile *b) -> bool {
-		return a->size() > b->size();
-	};
-	
-	FileSet files(m_files);
-	if (files.size() > 10) {
-		std::nth_element(files.begin(), files.begin() + 9, files.end(), compare);
-		files.erase(files.begin() + 10, files.end());
-	}
-	std::sort(files.begin(), files.end(), compare);
+	std::partial_sort(
+		begin(m_files), begin(m_files) + n, end(m_files),
+		[] (SourceFile *a, SourceFile *b) { return a->size() > b->size(); }
+	);
 	
 	int tloc = 0;
-	for (SourceFile *file : files) {
-		tloc += file->size();
-		file->print(std::cout);
+	for (std::size_t i = 0; i < n; ++i) {
+		tloc += m_files[i]->size();
+		m_files[i]->print(std::cout);
 	}
 	
 	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc)/m_size*100.);
