@@ -52,16 +52,12 @@ private:
 		
 		void read();
 		std::ostream &print(std::ostream &out) const;
-		std::size_t size() const { return m_index.size(); }
+		std::size_t size() const { return m_index.size() - 1; }
+		std::string::const_iterator line(int i) const { return m_index[i]; }
 		
-		std::string::const_iterator line_begin(int i) const
-		{ return i == 0 ? begin(m_data) : m_index[i - 1] + 1; }
-		
-		std::string::const_iterator line_end(int i) const { return m_index[i]; }
-		
-		boost::filesystem::path m_path;
-		std::string m_data;
 		std::vector<std::string::iterator> m_index;
+		std::string m_data;
+		boost::filesystem::path m_path;
 		int m_position;
 	};
 	

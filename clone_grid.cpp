@@ -89,15 +89,15 @@ void CloneGrid::finalize()
 {
 	auto less = [&] (const SourceLine &a, const SourceLine &b) {
 		return std::lexicographical_compare(
-			a.m_file->line_begin(a.m_number), a.m_file->line_end(a.m_number + m_runs - 1),
-			b.m_file->line_begin(b.m_number), b.m_file->line_end(b.m_number + m_runs - 1)
+			a.m_file->line(a.m_number), a.m_file->line(a.m_number + m_runs),
+			b.m_file->line(b.m_number), b.m_file->line(b.m_number + m_runs)
 		);
 	};
 	
 	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
 		return std::equal(
-			a.m_file->line_begin(a.m_number), a.m_file->line_end(a.m_number + m_runs - 1),
-			b.m_file->line_begin(b.m_number)
+			a.m_file->line(a.m_number), a.m_file->line(a.m_number + m_runs),
+			b.m_file->line(b.m_number)
 		);
 	};
 	
@@ -125,8 +125,9 @@ void CloneGrid::SourceFile::read()
 	m_data.assign(first, last);
 	
 	auto it = begin(m_data);
+	m_index.push_back(it);
 	while ((it = std::find(it, end(m_data), '\n')) != end(m_data))
-		m_index.push_back(it++);
+		m_index.push_back(++it);
 	
 	m_index.push_back(end(m_data));
 }
