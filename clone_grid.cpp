@@ -23,6 +23,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define GL_GLEXT_PROTOTYPES
 
 #include "clone_grid.h"
 
@@ -66,9 +67,9 @@ void CloneGrid::read_source(const fs::path &path)
 	
 	try {
 		for (fs::recursive_directory_iterator it(path), end; it != end; ++it)
-			if (boost::regex_match(it->path().string(), exclude)) {
+			if (boost::regex_match(it->path().string(), exclude))
 				it.no_push();
-			} else if (
+			else if (
 				it->symlink_status().type() == fs::regular_file &&
 				boost::regex_match(it->path().string(), include)
 			)
@@ -85,23 +86,18 @@ void CloneGrid::print_statistics()
 	std::cout << "Total LOC:   " << m_size << "\n";
 	std::cout << "Total files: " << m_files.size() << "\n\n";
 	
-	std::cout << "Top-10 Biggest files:\n";
+	std::size_t n = std::min(std::size_t(10), m_files.size());
+	std::cout << "Top-" << n << " biggest files:\n";
 	
-	auto compare = [] (SourceFile *a, SourceFile *b) -> bool {
-		return a->size() > b->size();
-	};
-	
-	FileSet files(m_files);
-	if (files.size() > 10) {
-		std::nth_element(files.begin(), files.begin() + 9, files.end(), compare);
-		files.erase(files.begin() + 10, files.end());
-	}
-	std::sort(files.begin(), files.end(), compare);
+	std::partial_sort(
+		begin(m_files), begin(m_files) + n, end(m_files),
+		[] (SourceFile *a, SourceFile *b) { return a->size() > b->size(); }
+	);
 	
 	int tloc = 0;
-	for (SourceFile *file : files) {
-		tloc += file->size();
-		file->print(std::cout);
+	for (std::size_t i = 0; i < n; ++i) {
+		tloc += m_files[i]->size();
+		m_files[i]->print(std::cout);
 	}
 	
 	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc)/m_size*100.);
@@ -171,40 +167,72 @@ bool CloneGrid::LineCompare::operator()(const SourceLine &a, const SourceLine &b
 	return false;
 }
 
-void CloneGrid::draw(double scale)
+void CloneGrid::setup()
 {
-	// TODO: Use a VAO for this static geometry.
-	
-	glBegin(GL_LINES);
-	
-	// Draw file borders:
-	glColor4f(1, 0, 0, .6 * sqrt(scale));
+	glGenBuffers(2, vboId);
+
+	// Setup file borders:
+	m_lcount = 2 * m_files.size() + 2;
+	std::vector<float> vertices;
+	vertices.reserve(m_lcount * 4);
+
+	float size = float(m_size);
 	for (SourceFile *file : m_files) {
-		int p = file->m_position;
-		glVertex2i(p, 0); glVertex2i(p, m_size);
-		glVertex2i(0, p); glVertex2i(m_size, p);
+		float p = float(file->m_position);
+		vertices.push_back(p);    vertices.push_back(0);
+		vertices.push_back(p);    vertices.push_back(size);
+		vertices.push_back(0);    vertices.push_back(p);
+		vertices.push_back(size); vertices.push_back(p);
 	}
-	glVertex2i(m_size, 0); glVertex2i(m_size, m_size);
-	glVertex2i(0, m_size); glVertex2i(m_size, m_size);
-	
-	// Draw blue diagonal:
-	glColor4f(0, 0, 1, 1);
-	glVertex2i(0, 0); glVertex2i(m_size, m_size);
-	
-	glEnd();
-	
-	// Draw clone dots:
-	glBegin(GL_POINTS);
-	glColor4f(1, 1, 1, sqrt(scale));
-	for (Lines *lineset : m_duplicates) {
-		//if (lineset->size() > 10) continue;
-		
+
+	std::vector<float> v {size, 0, size, size, 0, size, size, size};
+	vertices.insert(vertices.end(), v.begin(), v.end());
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), 0, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), &vertices[0]);
+
+	// Setup clone dots:
+	vertices.clear();
+
+	for (Lines *lineset : m_duplicates)
 		for (SourceLine &line1 : *lineset)
 		for (SourceLine &line2 : *lineset) {
-			int x = line1.m_file->m_position + line1.m_number;
-			int y = line2.m_file->m_position + line2.m_number;
-			glVertex2i(x, y);
+			vertices.push_back(line1.m_file->m_position + line1.m_number);
+			vertices.push_back(line2.m_file->m_position + line2.m_number);
+			m_clones++;
 		}
-	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[1]);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), 0, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), &vertices[0]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void CloneGrid::draw(double scale)
+{
+	// Draw file borders:
+	glColor4f(1, 0, 0, .6 * sqrt(scale));
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(2, GL_FLOAT, 0, 0);
+	glDrawArrays(GL_LINES, 0, m_lcount * 2);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Draw blue diagonal:
+	glBegin(GL_LINES);
+	glColor4f(0, 0, 1, 1);
+	glVertex2i(0, 0); glVertex2i(m_size, m_size);
 	glEnd();
+
+	// Draw clone dots:
+	glColor4f(1, 1, 1, sqrt(scale));
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[1]);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(2, GL_FLOAT, 0, 0);
+	glDrawArrays(GL_POINTS, 0, m_clones);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
