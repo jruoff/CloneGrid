@@ -64,12 +64,20 @@ void CloneGrid::read_source(const fs::path &path)
 
 void CloneGrid::print_statistics()
 {
+	int clones_0 = 0, clones_1 = 0, clones_2 = 0;
+	for (Lines &lineset : m_duplicates) {
+		clones_0 += 1;
+		clones_1 += 1 * lineset.size();
+		clones_2 += 1 * lineset.size() * lineset.size();
+	}
+	
 	std::cout << boost::format("Total size:  %.3f MiB\n") % (m_bytes / 1024. / 1024.);
 	std::cout << "Total LOC:   " << m_size << "\n";
-	std::cout << "Total files: " << m_files.size() << "\n\n";
-	
+	std::cout << "Total files: " << m_files.size() << "\n";
+	std::cout << "Clones:      " << clones_0 << ":" << clones_1 << ":" << clones_2 << "\n";
+
 	std::size_t n = std::min(std::size_t(10), m_files.size());
-	std::cout << "Top-" << n << " biggest files:\n";
+	std::cout << "\nTop-" << n << " biggest files:\n";
 	
 	std::partial_sort(
 		begin(m_files), begin(m_files) + n, end(m_files),
