@@ -102,20 +102,19 @@ void CloneGrid::print_statistics()
 
 void CloneGrid::finalize()
 {
-	auto compare = [&] (const SourceLine &a, const SourceLine &b) {
-		for (int i = 0; i < m_runs; i++) {
-			std::string &line1 = a.m_file->m_lines[a.m_number + i];
-			std::string &line2 = b.m_file->m_lines[b.m_number + i];
-			
-			int v = line1.compare(line2);
-			if (v != 0) return v;
-		}
-		
-		return 0;
+	auto less = [&] (const SourceLine &a, const SourceLine &b) {
+		return std::lexicographical_compare(
+			a.m_file->line_begin(a.m_number), a.m_file->line_end(a.m_number + m_runs - 1),
+			b.m_file->line_begin(b.m_number), b.m_file->line_end(b.m_number + m_runs - 1)
+		);
 	};
 	
-	auto less  = [&] (const SourceLine &a, const SourceLine &b) { return compare(a, b) <  0; };
-	auto equal = [&] (const SourceLine &a, const SourceLine &b) { return compare(a, b) == 0; };
+	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
+		return std::equal(
+			a.m_file->line_begin(a.m_number), a.m_file->line_end(a.m_number + m_runs - 1),
+			b.m_file->line_begin(b.m_number)
+		);
+	};
 	
 	auto first = begin(m_lines);
 	auto last  = end(m_lines);
@@ -136,8 +135,15 @@ void CloneGrid::finalize()
 void CloneGrid::SourceFile::read()
 {
 	std::ifstream ifs(m_path.string());
-	std::istream_iterator<Line> first(ifs), last;
-	m_lines.assign(first, last);
+	std::istreambuf_iterator<char> first(ifs), last;
+	m_data.reserve(fs::file_size(m_path));
+	m_data.assign(first, last);
+	
+	auto it = begin(m_data);
+	while ((it = std::find(it, end(m_data), '\n')) != end(m_data))
+		m_index.push_back(it++);
+	
+	m_index.push_back(end(m_data));
 }
 
 std::ostream &CloneGrid::SourceFile::print(std::ostream &out) const
