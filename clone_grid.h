@@ -29,12 +29,11 @@
 
 #include "idrawable.h"
 #include <boost/filesystem.hpp>
-#include <map>
 
 class CloneGrid : public virtual IDrawable
 {
 public:
-	CloneGrid(int runs = 4) : m_lines(LineCompare(runs)), m_runs(runs) {}
+	CloneGrid(int runs = 4) : m_runs(runs) {}
 	virtual ~CloneGrid();
 	
 	// Implement IDrawable
@@ -80,17 +79,16 @@ private:
 	};
 	
 	typedef std::vector<SourceLine> Lines;
-	typedef std::vector<Lines *> LineGroups;
+	typedef std::vector<Lines> LineGroups;
 	typedef std::vector<SourceFile *> FileSet;
-	typedef std::map<SourceLine, Lines *, LineCompare> LineMap;
 	
 	FileSet m_files;
-	LineMap m_lines;
+	Lines m_lines;
 	LineGroups m_duplicates;
 	
-	int m_size  = 0;
-	int m_bytes = 0;
 	int m_runs;
+	int m_size   = 0;
+	int m_bytes  = 0;
 	int m_clones = 0;
 	int m_lcount = 0;
 	

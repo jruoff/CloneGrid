@@ -55,9 +55,6 @@ CloneGrid::~CloneGrid()
 {
 	for (SourceFile *file : m_files)
 		delete file;
-	
-	for (Lines *lines : m_duplicates)
-		delete lines;
 }
 
 void CloneGrid::read_source(const fs::path &path)
@@ -105,12 +102,23 @@ void CloneGrid::print_statistics()
 
 void CloneGrid::finalize()
 {
-	m_lines.clear();
+	auto first = begin(m_lines);
+	auto last  = end(m_lines);
 	
-	m_duplicates.erase(std::remove_if(
-		m_duplicates.begin(), m_duplicates.end(),
-		[] (Lines *lines) { return lines->size() > 10; }
-	), m_duplicates.end());
+	LineCompare compare(m_runs);
+	std::sort(first, last, compare);
+	
+	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
+		return !compare(a, b) && !compare(b, a);
+	};
+	
+	while ((first = std::adjacent_find(first, last, equal)) != last) {
+		auto not_equal = [=] (const SourceLine &e) { return !equal(*first, e); };
+		auto limit = std::find_if(first, last, not_equal);
+		if (limit - first < 10)
+			m_duplicates.emplace_back(first, limit);
+		first = limit;
+	}
 }
 
 void CloneGrid::SourceFile::read()
@@ -134,24 +142,10 @@ void CloneGrid::read_lines(const fs::path &path)
 	file->read();
 	file->print(std::cout);
 	
-	std::vector<std::string> &lines = file->m_lines;
-	for (int i = 0; i <= int(lines.size()) - m_runs; i++) {
-		SourceLine line(file, i);
-		LineMap::iterator it = m_lines.find(line);
-		if (it == m_lines.end()) {
-			m_lines[line] = nullptr;
-		} else {
-			Lines *&value = it->second;
-			if (!value) {
-				value = new Lines();
-				m_duplicates.push_back(value);
-				value->push_back(it->first);
-			}
-			value->push_back(line);
-		}
-	}
+	for (int i = 0; i <= int(file->m_lines.size()) - m_runs; i++)
+		m_lines.emplace_back(file, i);
 	
-	m_size += lines.size();
+	m_size += file->m_lines.size();
 }
 
 bool CloneGrid::LineCompare::operator()(const SourceLine &a, const SourceLine &b)
@@ -195,9 +189,9 @@ void CloneGrid::setup()
 	// Setup clone dots:
 	vertices.clear();
 
-	for (Lines *lineset : m_duplicates)
-		for (SourceLine &line1 : *lineset)
-		for (SourceLine &line2 : *lineset) {
+	for (Lines &lineset : m_duplicates)
+		for (SourceLine &line1 : lineset)
+		for (SourceLine &line2 : lineset) {
 			vertices.push_back(line1.m_file->m_position + line1.m_number);
 			vertices.push_back(line2.m_file->m_position + line2.m_number);
 			m_clones++;
