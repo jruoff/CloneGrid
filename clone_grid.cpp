@@ -67,9 +67,9 @@ void CloneGrid::read_source(const fs::path &path)
 	
 	try {
 		for (fs::recursive_directory_iterator it(path), end; it != end; ++it)
-			if (boost::regex_match(it->path().string(), exclude)) {
+			if (boost::regex_match(it->path().string(), exclude))
 				it.no_push();
-			} else if (
+			else if (
 				it->symlink_status().type() == fs::regular_file &&
 				boost::regex_match(it->path().string(), include)
 			)
@@ -198,10 +198,8 @@ void CloneGrid::setup()
 	for (Lines *lineset : m_duplicates)
 		for (SourceLine &line1 : *lineset)
 		for (SourceLine &line2 : *lineset) {
-			int x = line1.m_file->m_position + line1.m_number;
-			int y = line2.m_file->m_position + line2.m_number;
-			vertices.push_back(x);
-			vertices.push_back(y);
+			vertices.push_back(line1.m_file->m_position + line1.m_number);
+			vertices.push_back(line2.m_file->m_position + line2.m_number);
 			m_clones++;
 		}
 
