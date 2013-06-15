@@ -65,6 +65,9 @@ private:
 		SourceLine(SourceFile *file, int number)
 			: m_file(file), m_number(number) {}
 		
+		std::string::const_iterator line(int i = 0) const
+		{ return m_file->line(m_number + i); }
+		
 		SourceFile *m_file;
 		int m_number;
 	};

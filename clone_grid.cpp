@@ -87,24 +87,18 @@ void CloneGrid::print_statistics()
 
 void CloneGrid::finalize()
 {
-	auto less = [&] (const SourceLine &a, const SourceLine &b) {
-		return std::lexicographical_compare(
-			a.m_file->line(a.m_number), a.m_file->line(a.m_number + m_runs),
-			b.m_file->line(b.m_number), b.m_file->line(b.m_number + m_runs)
-		);
-	};
-	
-	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
-		return std::equal(
-			a.m_file->line(a.m_number), a.m_file->line(a.m_number + m_runs),
-			b.m_file->line(b.m_number)
-		);
-	};
-	
 	auto first = begin(m_lines);
 	auto last  = end(m_lines);
 	
-	std::sort(first, last, less);
+	std::sort(first, last, [&] (const SourceLine &a, const SourceLine &b) {
+		return std::lexicographical_compare(
+			a.line(), a.line(m_runs), b.line(), b.line(m_runs)
+		);
+	});
+	
+	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
+		return std::equal(a.line(), a.line(m_runs), b.line());
+	};
 	
 	while ((first = std::adjacent_find(first, last, equal)) != last) {
 		auto not_equal = [=] (const SourceLine &e) { return !equal(*first, e); };
