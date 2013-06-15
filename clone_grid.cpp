@@ -36,21 +36,6 @@
 
 namespace fs = boost::filesystem;
 
-class Line
-{
-private:
-	std::string data;
-public:
-	friend std::istream &operator>>(std::istream &is, Line &l) {
-		char c;
-		l.data.clear();
-		while (!is.get(c).eof() && c != '\n')
-			l.data += c;
-		return is;
-	}
-	operator std::string() const { return data; }    
-};
-
 CloneGrid::~CloneGrid()
 {
 	for (SourceFile *file : m_files)
