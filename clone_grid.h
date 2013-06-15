@@ -46,8 +46,7 @@ public:
 	void finalize();
 	
 private:
-	class SourceFile {
-	public:
+	struct SourceFile {
 		SourceFile(const boost::filesystem::path &path, int position)
 			: m_path(path), m_position(position) {}
 		
@@ -60,8 +59,7 @@ private:
 		int m_position;
 	};
 	
-	class SourceLine {
-	public:
+	struct SourceLine {
 		SourceLine(SourceFile *file, int number)
 			: m_file(file), m_number(number) {}
 		
@@ -69,9 +67,9 @@ private:
 		int m_number;
 	};
 	
+	typedef std::vector<SourceFile *> FileSet;
 	typedef std::vector<SourceLine> Lines;
 	typedef std::vector<Lines> LineGroups;
-	typedef std::vector<SourceFile *> FileSet;
 	
 	FileSet m_files;
 	Lines m_lines;

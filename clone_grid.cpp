@@ -63,7 +63,7 @@ void CloneGrid::read_source(const fs::path &path)
 	boost::regex include(".*\\.(h|c|hpp|cpp|cc|cs|java|py|rb|php|hs)");
 	
 	try {
-		for (fs::recursive_directory_iterator it(path), end; it != end; ++it)
+		for (fs::recursive_directory_iterator it(path), last; it != last; ++it)
 			if (boost::regex_match(it->path().string(), exclude))
 				it.no_push();
 			else if (
@@ -129,13 +129,15 @@ void CloneGrid::finalize()
 			m_duplicates.emplace_back(first, limit);
 		first = limit;
 	}
+	
+	m_lines.clear();
 }
 
 void CloneGrid::SourceFile::read()
 {
 	std::ifstream ifs(m_path.string());
-	std::istream_iterator<Line> begin(ifs), end;
-	m_lines.assign(begin, end);
+	std::istream_iterator<Line> first(ifs), last;
+	m_lines.assign(first, last);
 }
 
 std::ostream &CloneGrid::SourceFile::print(std::ostream &out) const
@@ -152,10 +154,10 @@ void CloneGrid::read_lines(const fs::path &path)
 	file->read();
 	file->print(std::cout);
 	
-	for (int i = 0; i <= int(file->m_lines.size()) - m_runs; i++)
+	for (int i = 0; i <= int(file->size()) - m_runs; i++)
 		m_lines.emplace_back(file, i);
 	
-	m_size += file->m_lines.size();
+	m_size += file->size();
 }
 
 void CloneGrid::setup()
@@ -167,17 +169,13 @@ void CloneGrid::setup()
 	std::vector<float> vertices;
 	vertices.reserve(m_lcount * 4);
 
-	float size = float(m_size);
+	float size = m_size;
 	for (SourceFile *file : m_files) {
-		float p = float(file->m_position);
-		vertices.push_back(p);    vertices.push_back(0);
-		vertices.push_back(p);    vertices.push_back(size);
-		vertices.push_back(0);    vertices.push_back(p);
-		vertices.push_back(size); vertices.push_back(p);
+		float p = file->m_position;
+		vertices.insert(end(vertices), {p, 0, p, size, 0, p, size, p});
 	}
 
-	std::vector<float> v {size, 0, size, size, 0, size, size, size};
-	vertices.insert(vertices.end(), v.begin(), v.end());
+	vertices.insert(end(vertices), {size, 0, size, size, 0, size, size, size});
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), 0, GL_STATIC_DRAW);
