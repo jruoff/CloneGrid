@@ -69,15 +69,6 @@ private:
 		int m_number;
 	};
 	
-	class LineCompare {
-	public:
-		LineCompare(int runs) : m_runs(runs) {}
-		bool operator()(const SourceLine &a, const SourceLine &b);
-		
-	private:
-		int m_runs;
-	};
-	
 	typedef std::vector<SourceLine> Lines;
 	typedef std::vector<Lines> LineGroups;
 	typedef std::vector<SourceFile *> FileSet;

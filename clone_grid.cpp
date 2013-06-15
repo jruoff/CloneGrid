@@ -102,15 +102,25 @@ void CloneGrid::print_statistics()
 
 void CloneGrid::finalize()
 {
+	auto compare = [&] (const SourceLine &a, const SourceLine &b) {
+		for (int i = 0; i < m_runs; i++) {
+			std::string &line1 = a.m_file->m_lines[a.m_number + i];
+			std::string &line2 = b.m_file->m_lines[b.m_number + i];
+			
+			int v = line1.compare(line2);
+			if (v != 0) return v;
+		}
+		
+		return 0;
+	};
+	
+	auto less  = [&] (const SourceLine &a, const SourceLine &b) { return compare(a, b) <  0; };
+	auto equal = [&] (const SourceLine &a, const SourceLine &b) { return compare(a, b) == 0; };
+	
 	auto first = begin(m_lines);
 	auto last  = end(m_lines);
 	
-	LineCompare compare(m_runs);
-	std::sort(first, last, compare);
-	
-	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
-		return !compare(a, b) && !compare(b, a);
-	};
+	std::sort(first, last, less);
 	
 	while ((first = std::adjacent_find(first, last, equal)) != last) {
 		auto not_equal = [=] (const SourceLine &e) { return !equal(*first, e); };
@@ -146,19 +156,6 @@ void CloneGrid::read_lines(const fs::path &path)
 		m_lines.emplace_back(file, i);
 	
 	m_size += file->m_lines.size();
-}
-
-bool CloneGrid::LineCompare::operator()(const SourceLine &a, const SourceLine &b)
-{
-	for (int i = 0; i < m_runs; i++) {
-		std::string &line1 = a.m_file->m_lines[a.m_number + i];
-		std::string &line2 = b.m_file->m_lines[b.m_number + i];
-		
-		int v = line1.compare(line2);
-		if (v != 0) return v < 0;
-	}
-	
-	return false;
 }
 
 void CloneGrid::setup()
