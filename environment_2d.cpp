@@ -63,7 +63,6 @@ static void reshape(int width, int height)
 	glLoadIdentity();
 	gluOrtho2D(- width / 2, width / 2, height / 2, - height / 2);
 	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
 }
 
 static void display()
@@ -76,12 +75,14 @@ static void display()
 	
 	glClear(GL_COLOR_BUFFER_BIT);
 
-
+	glLoadIdentity();
+	glTranslated(.5, .5, 0);
+	
 	glPushMatrix();
 		glScalef(s_scale, s_scale, 0);
 
 		glPushMatrix();
-			glTranslated(s_translate_x + .5, s_translate_y + .5, 0);
+			glTranslated(s_translate_x, s_translate_y, 0);
 			s_drawable->draw(s_scale);
 		glPopMatrix();
 
