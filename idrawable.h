@@ -31,7 +31,7 @@ class IDrawable
 {
 public:
 	virtual void setup() = 0;
-	virtual void draw(double scale) = 0;
+	virtual void draw(double scale, int width, int height, int px, int py) = 0;
 	virtual double size() = 0;
 	virtual ~IDrawable() {}
 };

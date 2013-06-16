@@ -36,6 +36,16 @@
 
 namespace fs = boost::filesystem;
 
+CloneGrid::CloneGrid(int runs) :
+	m_runs(runs),
+	m_font("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf")
+{
+	if (m_font.Error())
+		std::cerr << "Could not load font.\n";
+	
+	m_font.FaceSize(15);
+}
+
 CloneGrid::~CloneGrid()
 {
 	for (SourceFile *file : m_files)
@@ -193,8 +203,12 @@ void CloneGrid::setup()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void CloneGrid::draw(double scale)
+void CloneGrid::draw(double scale, int width, int height, int px, int py)
 {
+	py = m_size - py;
+	glTranslated(0, m_size, 0);
+	glScaled(1, -1, 1);
+	
 	// Draw file borders:
 	glColor4f(1, 0, 0, .6 * sqrt(scale));
 	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
@@ -218,4 +232,23 @@ void CloneGrid::draw(double scale)
 	glDrawArrays(GL_POINTS, 0, m_clones);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+	glLoadIdentity();
+	glColor4f(.5, 1, .5, 1);
+	
+	int left = -width  / 2;
+	int top  =  height / 2;
+	
+	m_font.Render(
+		(boost::format("Scale:    %f")% scale).str().c_str(), -1,
+		FTPoint(left + 20, top - 20 - m_font.FaceSize())
+	);
+	m_font.Render(
+		(boost::format("Size:     (%d, %d)") % width % height).str().c_str(), -1,
+		FTPoint(left + 20, top - 40 - m_font.FaceSize())
+	);
+	m_font.Render(
+		(boost::format("Position: (%d, %d)") % px % py).str().c_str(), -1,
+		FTPoint(left + 20, top - 60 - m_font.FaceSize())
+	);
 }

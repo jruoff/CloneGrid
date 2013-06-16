@@ -29,16 +29,17 @@
 
 #include "idrawable.h"
 #include <boost/filesystem.hpp>
+#include <FTGL/ftgl.h>
 
 class CloneGrid : public virtual IDrawable
 {
 public:
-	CloneGrid(int runs = 4) : m_runs(runs) {}
+	CloneGrid(int runs = 4);
 	virtual ~CloneGrid();
 	
 	// Implement IDrawable
 	virtual void setup();
-	virtual void draw(double scale);
+	virtual void draw(double scale, int width, int height, int px, int py);
 	virtual double size() { return m_size; }
 	
 	void read_source(const boost::filesystem::path &path);
@@ -89,6 +90,8 @@ private:
 	unsigned int vboId[2];
 	
 	void read_lines(const boost::filesystem::path &path);
+	
+	FTTextureFont m_font;
 };
 
 #endif // CLONE_GRID_H

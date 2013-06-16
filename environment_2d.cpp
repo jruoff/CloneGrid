@@ -54,14 +54,14 @@ static void reset()
 
 static void reshape(int width, int height)
 {
-	s_window_width  = width  = width  / 2 * 2 + 2;
-	s_window_height = height = height / 2 * 2 + 2;
+	s_window_width  = width  = (width  + 1) / 2 * 2;
+	s_window_height = height = (height + 1) / 2 * 2;
 	
 	glViewport(0, 0, width, height);
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(- width / 2, width / 2, height / 2, - height / 2);
+	gluOrtho2D(- width / 2, width / 2, - height / 2, height / 2);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -83,7 +83,10 @@ static void display()
 
 		glPushMatrix();
 			glTranslated(s_translate_x, s_translate_y, 0);
-			s_drawable->draw(s_scale);
+			s_drawable->draw(s_scale,
+				s_window_width, s_window_height,
+				-s_translate_x, -s_translate_y
+			);
 		glPopMatrix();
 
 		if (s_scale > 1/3.) {
@@ -145,8 +148,8 @@ static void mouse(int button, int state, int x, int y)
 			break;
 			
 		default:
-			s_old_x = s_translate_x*s_scale - x;
-			s_old_y = s_translate_y*s_scale - y;
+			s_old_x = s_translate_x * s_scale - x;
+			s_old_y = s_translate_y * s_scale + y;
 	}
 	
 	glutPostRedisplay();
@@ -154,8 +157,8 @@ static void mouse(int button, int state, int x, int y)
 
 static void motion(int x, int y)
 {
-	s_translate_x = (s_old_x + x)/s_scale;
-	s_translate_y = (s_old_y + y)/s_scale;
+	s_translate_x = (s_old_x + x) / s_scale;
+	s_translate_y = (s_old_y - y) / s_scale;
 	glutPostRedisplay();
 }
 
