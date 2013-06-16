@@ -54,14 +54,14 @@ static void reset()
 
 static void reshape(int width, int height)
 {
-	s_window_width  = width;
-	s_window_height = height;
+	s_window_width  = width  = width  / 2 * 2 + 2;
+	s_window_height = height = height / 2 * 2 + 2;
 	
 	glViewport(0, 0, width, height);
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(-width/2., width/2., height/2., -height/2.);
+	gluOrtho2D(- width / 2, width / 2, height / 2, - height / 2);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -81,7 +81,7 @@ static void display()
 		glScalef(s_scale, s_scale, 0);
 
 		glPushMatrix();
-			glTranslatef(s_translate_x, s_translate_y, 0);
+			glTranslated(s_translate_x + .5, s_translate_y + .5, 0);
 			s_drawable->draw(s_scale);
 		glPopMatrix();
 
@@ -103,8 +103,8 @@ static void display()
 	glVertex2i(0, -20); glVertex2i(0, 20);
 
 	glColor4f(0, 1, 1, .2);
-	glVertex2i(-s_window_width/2., 0); glVertex2i(s_window_width/2., 0);
-	glVertex2i(0, -s_window_height/2.); glVertex2i(0, s_window_width/2.);
+	glVertex2i(- s_window_width / 2, 0); glVertex2i(s_window_width / 2, 0);
+	glVertex2i(0, - s_window_height / 2); glVertex2i(0, s_window_width / 2);
 
 	glEnd();
 
