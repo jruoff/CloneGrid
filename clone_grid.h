@@ -81,6 +81,8 @@ private:
 	Lines m_lines;
 	LineGroups m_duplicates;
 	
+	SourceFile *get_file(int position);
+	
 	int m_runs;
 	int m_size   = 0;
 	int m_bytes  = 0;

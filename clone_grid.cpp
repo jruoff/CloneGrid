@@ -89,15 +89,16 @@ void CloneGrid::print_statistics()
 	std::size_t n = std::min(std::size_t(10), m_files.size());
 	std::cout << "\nTop-" << n << " biggest files:\n";
 	
+	FileSet files_sorted(m_files);
 	std::partial_sort(
-		begin(m_files), begin(m_files) + n, end(m_files),
+		begin(files_sorted), begin(files_sorted) + n, end(files_sorted),
 		[] (SourceFile *a, SourceFile *b) { return a->size() > b->size(); }
 	);
 	
 	int tloc = 0;
 	for (std::size_t i = 0; i < n; ++i) {
-		tloc += m_files[i]->size();
-		m_files[i]->print(std::cout);
+		tloc += files_sorted[i]->size();
+		files_sorted[i]->print(std::cout);
 	}
 	
 	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc)/m_size*100.);
@@ -147,6 +148,16 @@ void CloneGrid::SourceFile::read()
 std::ostream &CloneGrid::SourceFile::print(std::ostream &out) const
 {
 	return out << boost::format("%5d: %s\n") % size() % m_path;
+}
+
+CloneGrid::SourceFile *CloneGrid::get_file(int position)
+{
+	if (position < 0 || position >= m_size) return nullptr;
+	
+	return *std::upper_bound(
+		begin(m_files), end(m_files), position,
+		[] (int pos, const SourceFile *file) { return pos < file->m_position; }
+	);
 }
 
 void CloneGrid::read_lines(const fs::path &path)
@@ -239,16 +250,33 @@ void CloneGrid::draw(double scale, int width, int height, int px, int py)
 	int left = -width  / 2;
 	int top  =  height / 2;
 	
+	int font_size = m_font.FaceSize();
+	
 	m_font.Render(
 		(boost::format("Scale:    %f")% scale).str().c_str(), -1,
-		FTPoint(left + 20, top - 20 - m_font.FaceSize())
+		FTPoint(left + 20, top - 20 - font_size)
 	);
 	m_font.Render(
 		(boost::format("Size:     (%d, %d)") % width % height).str().c_str(), -1,
-		FTPoint(left + 20, top - 40 - m_font.FaceSize())
+		FTPoint(left + 20, top - 40 - font_size)
 	);
 	m_font.Render(
 		(boost::format("Position: (%d, %d)") % px % py).str().c_str(), -1,
-		FTPoint(left + 20, top - 60 - m_font.FaceSize())
+		FTPoint(left + 20, top - 60 - font_size)
 	);
+	
+	SourceFile *file = get_file(px);
+	if (file)
+		m_font.Render(
+			file->m_path.c_str(), -1,
+			FTPoint(20, top - 20 - font_size)
+		);
+	
+	file = get_file(py);
+	if (file)
+		m_font.Render(
+			file->m_path.c_str(), -1,
+			FTPoint(left + 20, 20 - font_size)
+		);
+	
 }
