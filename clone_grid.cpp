@@ -31,8 +31,9 @@
 #include <GL/glut.h>
 #include <boost/format.hpp>
 #include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 #include <iostream>
-#include <algorithm>
+#include <parallel/algorithm>
 
 namespace fs = boost::filesystem;
 
@@ -109,7 +110,7 @@ void CloneGrid::finalize()
 	auto first = begin(m_lines);
 	auto last  = end(m_lines);
 	
-	std::sort(first, last, [&] (const SourceLine &a, const SourceLine &b) {
+	__gnu_parallel::sort(first, last, [&] (const SourceLine &a, const SourceLine &b) {
 		return std::lexicographical_compare(
 			a.line(), a.line(m_runs), b.line(), b.line(m_runs)
 		);
@@ -154,10 +155,10 @@ CloneGrid::SourceFile *CloneGrid::get_file(int position)
 {
 	if (position < 0 || position >= m_size) return nullptr;
 	
-	return *std::upper_bound(
+	return *(std::upper_bound(
 		begin(m_files), end(m_files), position,
 		[] (int pos, const SourceFile *file) { return pos < file->m_position; }
-	);
+	) - 1);
 }
 
 void CloneGrid::read_lines(const fs::path &path)
@@ -206,12 +207,43 @@ void CloneGrid::setup()
 			vertices.push_back(line2.m_file->m_position + line2.m_number);
 			m_clones++;
 		}
+	m_duplicates.clear();
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboId[1]);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), 0, GL_STATIC_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), &vertices[0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void CloneGrid::draw_snippet(int left, int top, int pc, double scale)
+{
+	int font_size = m_font.FaceSize() - 2, lines = 20, n = lines / 4 + 1;
+
+	SourceFile *file = get_file(pc);
+
+	if (!file) return;
+	glColor4f(.5, 1, .5, 1);
+	m_font.Render(file->m_path.c_str(), -1, FTPoint(left, top - font_size));
+
+	if (scale <= 1/3.) return;
+	double a = sqrt(std::max(.0, 1.5 * scale - .5));
+	int p = pc - file->m_position;
+	int first = std::max(- lines, - p);
+	int last  = std::min(  lines, - p - 1 + int(file->size()));
+
+	for (int i = first; i <= last; i++) {
+		glColor4f(.5, 1, .5, a * std::min((lines + 1. - std::abs(i)) / n, 1.));
+
+		std::string line(file->line(p + i), file->line(p + i + 1));
+		if (line.back() == '\n') line.resize(line.size() - 1);
+		boost::replace_all(line, "\t", "    ");
+		boost::replace_all(line, "\r", "");
+
+		m_font.Render(line.c_str(), -1,
+			FTPoint(left, - m_font.LineHeight() * i - font_size / 2)
+		);
+	}
 }
 
 void CloneGrid::draw(double scale, int width, int height, int px, int py)
@@ -244,39 +276,9 @@ void CloneGrid::draw(double scale, int width, int height, int px, int py)
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
+	// Draw code snippets:
+	int margin = 20;
 	glLoadIdentity();
-	glColor4f(.5, 1, .5, 1);
-	
-	int left = -width  / 2;
-	int top  =  height / 2;
-	
-	int font_size = m_font.FaceSize();
-	
-	m_font.Render(
-		(boost::format("Scale:    %f")% scale).str().c_str(), -1,
-		FTPoint(left + 20, top - 20 - font_size)
-	);
-	m_font.Render(
-		(boost::format("Size:     (%d, %d)") % width % height).str().c_str(), -1,
-		FTPoint(left + 20, top - 40 - font_size)
-	);
-	m_font.Render(
-		(boost::format("Position: (%d, %d)") % px % py).str().c_str(), -1,
-		FTPoint(left + 20, top - 60 - font_size)
-	);
-	
-	SourceFile *file = get_file(px);
-	if (file)
-		m_font.Render(
-			file->m_path.c_str(), -1,
-			FTPoint(20, top - 20 - font_size)
-		);
-	
-	file = get_file(py);
-	if (file)
-		m_font.Render(
-			file->m_path.c_str(), -1,
-			FTPoint(left + 20, 20 - font_size)
-		);
-	
+	draw_snippet(margin - width / 2, height / 2 - margin, py, scale);
+	draw_snippet(margin            , height / 2 - margin, px, scale);
 }

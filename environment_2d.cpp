@@ -33,6 +33,13 @@
 
 // #define PRINT_DURATION
 
+namespace key {
+	enum {
+		backspace =   8,
+		escape    =  27,
+	};
+}
+
 static IDrawable *s_drawable;
 
 static double s_scale;
@@ -44,8 +51,7 @@ static int s_window_height = 800;
 
 static void reset()
 {
-	s_translate_x = -s_drawable->size() / 2;
-	s_translate_y = -s_drawable->size() / 2;
+	s_translate_x = s_translate_y = - s_drawable->size() / 2;
 	s_scale = std::min(1.,
 		std::min(s_window_width, s_window_height)
 		/ s_drawable->size() / 1.05
@@ -91,7 +97,7 @@ static void display()
 
 		if (s_scale > 1/3.) {
 			glBegin(GL_LINE_STRIP);
-			glColor4f(0, 1, 1, .6 * sqrt(std::max(.0, 3 * s_scale - 1)));
+			glColor4f(0, 1, 1, .6 * sqrt(std::max(.0, 1.5 * s_scale - .5)));
 			glVertex2i(-20, -20); glVertex2i( 20, -20);
 			glVertex2i( 20,  20); glVertex2i(-20,  20);
 			glVertex2i(-20, -20);
@@ -122,11 +128,26 @@ static void display()
 #endif
 }
 
-static void keyboard(unsigned char key, int x, int y)
+static void keyboard(unsigned char k, int x, int y)
 {
-	switch (key) {
-	case  8: reset(); break; // BACKSPACE
-	case 27: exit(0); break; // ESCAPE
+	switch (k) {
+		case key::backspace: reset(); break;
+		case key::escape:    exit(0); break;
+	}
+
+	glutPostRedisplay();
+}
+
+static void special(int k, int x, int y)
+{
+	switch (k) {
+		case GLUT_KEY_F1:        ; break;
+		case GLUT_KEY_LEFT:      s_translate_x++; break;
+		case GLUT_KEY_UP:        s_translate_y--; break;
+		case GLUT_KEY_RIGHT:     s_translate_x--; break;
+		case GLUT_KEY_DOWN:      s_translate_y++; break;
+		case GLUT_KEY_PAGE_UP:   s_translate_x++; s_translate_y--; break;
+		case GLUT_KEY_PAGE_DOWN: s_translate_x--; s_translate_y++; break;
 	}
 
 	glutPostRedisplay();
@@ -189,6 +210,7 @@ void Environment2D::start()
 	glutReshapeFunc(reshape);
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
+	glutSpecialFunc(special);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 
