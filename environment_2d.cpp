@@ -33,12 +33,10 @@
 
 // #define PRINT_DURATION
 
-namespace key {
-	enum {
-		backspace =   8,
-		escape    =  27,
-	};
-}
+enum class key {
+	backspace =   8,
+	escape    =  27,
+};
 
 static IDrawable *s_drawable;
 
@@ -130,7 +128,7 @@ static void display()
 
 static void keyboard(unsigned char k, int x, int y)
 {
-	switch (k) {
+	switch (key(k)) {
 		case key::backspace: reset(); break;
 		case key::escape:    exit(0); break;
 	}

@@ -73,11 +73,11 @@ private:
 		int m_number;
 	};
 	
-	typedef std::vector<SourceFile *> FileSet;
+	typedef std::vector<SourceFile *> Files;
 	typedef std::vector<SourceLine> Lines;
 	typedef std::vector<Lines> LineGroups;
 	
-	FileSet m_files;
+	Files m_files;
 	Lines m_lines;
 	LineGroups m_duplicates;
 	

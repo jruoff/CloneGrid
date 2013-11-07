@@ -55,8 +55,8 @@ CloneGrid::~CloneGrid()
 
 void CloneGrid::read_source(const fs::path &path)
 {
-	boost::regex exclude(".*/build|.*/\\..*");
-	boost::regex include(".*\\.(h|c|hpp|cpp|cc|cs|java|py|rb|php|hs)");
+	boost::regex exclude(".*/(build|test|third_party|\\..*)");
+	boost::regex include(".*\\.(h|c|hpp|cpp|cc|cs|java|py|rb|php|hs|sh|y|ll|diff)|CMakeLists\\.txt");
 	
 	try {
 		for (fs::recursive_directory_iterator it(path), last; it != last; ++it)
@@ -90,7 +90,7 @@ void CloneGrid::print_statistics()
 	std::size_t n = std::min(std::size_t(10), m_files.size());
 	std::cout << "\nTop-" << n << " biggest files:\n";
 	
-	FileSet files_sorted(m_files);
+	Files files_sorted(m_files);
 	std::partial_sort(
 		begin(files_sorted), begin(files_sorted) + n, end(files_sorted),
 		[] (SourceFile *a, SourceFile *b) { return a->size() > b->size(); }
@@ -228,14 +228,14 @@ void CloneGrid::draw_snippet(int left, int top, int pc, double scale)
 
 	if (scale <= 1/3.) return;
 	double a = sqrt(std::max(.0, 1.5 * scale - .5));
-	int p = pc - file->m_position;
-	int first = std::max(- lines, - p);
-	int last  = std::min(  lines, - p - 1 + int(file->size()));
+	int p = file->m_position - pc;
+	int first = std::max(- lines, p);
+	int last  = std::min(  lines, p + int(file->size()) - 1);
 
 	for (int i = first; i <= last; i++) {
 		glColor4f(.5, 1, .5, a * std::min((lines + 1. - std::abs(i)) / n, 1.));
 
-		std::string line(file->line(p + i), file->line(p + i + 1));
+		std::string line(file->line(i - p), file->line(i - p + 1));
 		if (line.back() == '\n') line.resize(line.size() - 1);
 		boost::replace_all(line, "\t", "    ");
 		boost::replace_all(line, "\r", "");
