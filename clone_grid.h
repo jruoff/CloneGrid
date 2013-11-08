@@ -38,22 +38,21 @@ public:
 	virtual ~CloneGrid();
 	
 	// Implement IDrawable
-	virtual void setup();
 	virtual void draw(double scale, int width, int height, int px, int py);
 	virtual double size() { return m_size; }
 	
 	void read_source(const boost::filesystem::path &path);
 	void print_statistics();
 	void finalize();
+	void setup();
 	
 private:
 	struct SourceFile {
 		SourceFile(const boost::filesystem::path &path, int position)
 			: m_path(path), m_position(position) {}
 		
-		void read();
-		std::ostream &print(std::ostream &out) const;
-		std::size_t size() const { return m_index.size() - 1; }
+		std::size_t read();
+		std::size_t line_count() const { return m_index.size() - 1; }
 		std::string::const_iterator line(int i) const { return m_index[i]; }
 		
 		std::vector<std::string::iterator> m_index;
@@ -62,11 +61,13 @@ private:
 		int m_position;
 	};
 	
+	friend std::ostream &operator<<(std::ostream &out, const SourceFile &file);
+	
 	struct SourceLine {
 		SourceLine(SourceFile *file, int number)
 			: m_file(file), m_number(number) {}
 		
-		std::string::const_iterator line(int i = 0) const
+		std::string::const_iterator operator[](int i) const
 		{ return m_file->line(m_number + i); }
 		
 		SourceFile *m_file;

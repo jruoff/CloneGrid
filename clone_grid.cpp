@@ -26,6 +26,7 @@
 #define GL_GLEXT_PROTOTYPES
 
 #include "clone_grid.h"
+#include "algorithm_ext.h"
 
 #include <fstream>
 #include <GL/glut.h>
@@ -93,13 +94,13 @@ void CloneGrid::print_statistics()
 	Files files_sorted(m_files);
 	std::partial_sort(
 		begin(files_sorted), begin(files_sorted) + n, end(files_sorted),
-		[] (SourceFile *a, SourceFile *b) { return a->size() > b->size(); }
+		[] (SourceFile *a, SourceFile *b) { return a->line_count() > b->line_count(); }
 	);
 	
 	int tloc = 0;
 	for (std::size_t i = 0; i < n; ++i) {
-		tloc += files_sorted[i]->size();
-		files_sorted[i]->print(std::cout);
+		tloc += files_sorted[i]->line_count();
+		std::cout << *files_sorted[i];
 	}
 	
 	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc)/m_size*100.);
@@ -111,31 +112,27 @@ void CloneGrid::finalize()
 	auto last  = end(m_lines);
 	
 	__gnu_parallel::sort(first, last, [&] (const SourceLine &a, const SourceLine &b) {
-		return std::lexicographical_compare(
-			a.line(), a.line(m_runs), b.line(), b.line(m_runs)
-		);
+		return std::lexicographical_compare(a[0], a[m_runs], b[0], b[m_runs]);
 	});
 	
 	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
-		return std::equal(a.line(), a.line(m_runs), b.line());
+		return alg::equal(a[0], a[m_runs], b[0], b[m_runs]);
 	};
 	
-	while ((first = std::adjacent_find(first, last, equal)) != last) {
-		auto not_equal = [=] (const SourceLine &e) { return !equal(*first, e); };
-		auto limit = std::find_if(first, last, not_equal);
-		if (limit - first < 10)
-			m_duplicates.emplace_back(first, limit);
-		first = limit;
-	}
+	auto p = std::make_pair(first, first);
+	while ((p = alg::adjacent_find_range(p.second, last, equal)).first != last)
+		if (p.second - p.first < 10)
+			m_duplicates.emplace_back(p.first, p.second);
 	
 	m_lines.clear();
 }
 
-void CloneGrid::SourceFile::read()
+std::size_t CloneGrid::SourceFile::read()
 {
+	std::size_t size = fs::file_size(m_path);
 	std::ifstream ifs(m_path.string());
 	std::istreambuf_iterator<char> first(ifs), last;
-	m_data.reserve(fs::file_size(m_path));
+	m_data.reserve(size);
 	m_data.assign(first, last);
 	
 	auto it = begin(m_data);
@@ -144,11 +141,13 @@ void CloneGrid::SourceFile::read()
 		m_index.push_back(++it);
 	
 	m_index.push_back(end(m_data));
+	
+	return size;
 }
 
-std::ostream &CloneGrid::SourceFile::print(std::ostream &out) const
+std::ostream &operator<<(std::ostream &out, const CloneGrid::SourceFile &file)
 {
-	return out << boost::format("%5d: %s\n") % size() % m_path;
+	return out << boost::format("%5d: %s\n") % file.line_count() % file.m_path;
 }
 
 CloneGrid::SourceFile *CloneGrid::get_file(int position)
@@ -163,17 +162,15 @@ CloneGrid::SourceFile *CloneGrid::get_file(int position)
 
 void CloneGrid::read_lines(const fs::path &path)
 {
-	m_bytes += fs::file_size(path);
-	
 	SourceFile *file = new SourceFile(path, m_size);
 	m_files.push_back(file);
-	file->read();
-	file->print(std::cout);
+	m_bytes += file->read();
+	std::cout << *file;
 	
-	for (int i = 0; i <= int(file->size()) - m_runs; i++)
+	for (int i = 0; i <= int(file->line_count()) - m_runs; ++i)
 		m_lines.emplace_back(file, i);
 	
-	m_size += file->size();
+	m_size += file->line_count();
 }
 
 void CloneGrid::setup()
@@ -205,7 +202,7 @@ void CloneGrid::setup()
 		for (SourceLine &line2 : lineset) {
 			vertices.push_back(line1.m_file->m_position + line1.m_number);
 			vertices.push_back(line2.m_file->m_position + line2.m_number);
-			m_clones++;
+			++m_clones;
 		}
 	m_duplicates.clear();
 
@@ -230,19 +227,21 @@ void CloneGrid::draw_snippet(int left, int top, int pc, double scale)
 	double a = sqrt(std::max(.0, 1.5 * scale - .5));
 	int p = file->m_position - pc;
 	int first = std::max(- lines, p);
-	int last  = std::min(  lines, p + int(file->size()) - 1);
+	int last  = std::min(  lines, p + int(file->line_count()) - 1);
 
-	for (int i = first; i <= last; i++) {
-		glColor4f(.5, 1, .5, a * std::min((lines + 1. - std::abs(i)) / n, 1.));
+	while (first != last) {
+		glColor4f(.5, 1, .5, a * std::min((lines + 1. - std::abs(first)) / n, 1.));
 
-		std::string line(file->line(i - p), file->line(i - p + 1));
+		std::string line(file->line(first - p), file->line(first - p + 1));
 		if (line.back() == '\n') line.resize(line.size() - 1);
 		boost::replace_all(line, "\t", "    ");
 		boost::replace_all(line, "\r", "");
 
 		m_font.Render(line.c_str(), -1,
-			FTPoint(left, - m_font.LineHeight() * i - font_size / 2)
+			FTPoint(left, - m_font.LineHeight() * first - font_size / 2)
 		);
+
+		++first;
 	}
 }
 

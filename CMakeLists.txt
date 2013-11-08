@@ -31,10 +31,10 @@ include_directories("/usr/include/freetype2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fopenmp -std=c++11")
 
 # Debug build:
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 # Release build:
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -s")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -s")
 
 add_executable(clonegrid environment_2d.cpp clone_grid.cpp main.cpp)
 target_link_libraries(clonegrid ftgl glut GLU GL boost_filesystem boost_regex boost_system)
