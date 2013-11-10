@@ -39,20 +39,29 @@ bool equal(RAIterator1 first1, RAIterator1 last1, RAIterator2 first2, RAIterator
 }
 
 template<typename FIterator, typename BinaryPredicate>
-std::pair<FIterator, FIterator> adjacent_find_range(FIterator first, FIterator last, BinaryPredicate p) {
-	typedef typename std::iterator_traits<FIterator>::value_type value_type;
-	
-	std::pair<FIterator, FIterator> result(last, last);
-	
-	first = std::adjacent_find(first, last, p);
-	if (first == last) return result;
-	
-	result.first  = first;
-	result.second = std::adjacent_find(++first, last,
-		[p] (const value_type &a, const value_type &b) { return !p(a, b); }
-	);
-	
-	return result;
+bool adjacent_range(FIterator &first, FIterator &second, FIterator last, BinaryPredicate p)
+{
+	if (second == last) return true;
+	do first = second; while (++second != last && !p(*first, *second));
+	return false;
+}
+
+template<typename FIterator, typename BinaryPredicate>
+bool adjacent_range_not(FIterator &first, FIterator &second, FIterator last, BinaryPredicate p)
+{
+	if (second == last) return true;
+	do first = second; while (++second != last &&  p(*first, *second));
+	return false;
+}
+
+template<typename FIterator, typename BP, typename A1, typename A2>
+void process_adjacent(FIterator first, FIterator last, BP p, A1 not_p, A2 are_p)
+{
+	while (true) {
+		FIterator a, b = first;
+		if (alg::adjacent_range    (a, first, last, p)) break; not_p(b, a);
+		if (alg::adjacent_range_not(b, first, last, p)) break; are_p(a, b);
+	}
 }
 
 };

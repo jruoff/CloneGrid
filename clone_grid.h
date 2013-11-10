@@ -55,7 +55,7 @@ private:
 		std::size_t line_count() const { return m_index.size() - 1; }
 		std::string::const_iterator line(int i) const { return m_index[i]; }
 		
-		std::vector<std::string::iterator> m_index;
+		std::vector<std::string::const_iterator> m_index;
 		std::string m_data;
 		boost::filesystem::path m_path;
 		int m_position;
@@ -67,6 +67,7 @@ private:
 		SourceLine(SourceFile *file, int number)
 			: m_file(file), m_number(number) {}
 		
+		int position() const { return m_file->m_position + m_number; }
 		std::string::const_iterator operator[](int i) const
 		{ return m_file->line(m_number + i); }
 		
@@ -76,21 +77,22 @@ private:
 	
 	typedef std::vector<SourceFile *> Files;
 	typedef std::vector<SourceLine> Lines;
-	typedef std::vector<Lines> LineGroups;
+	typedef std::pair<float, float> Point;
+	typedef std::pair<Point, Point> Line;
 	
 	Files m_files;
 	Lines m_lines;
-	LineGroups m_duplicates;
+	std::vector<Point> m_vertices;
+	std::vector<Line> m_vlines;
 	
 	SourceFile *get_file(int position);
 	
 	int m_runs;
 	int m_size   = 0;
 	int m_bytes  = 0;
-	int m_clones = 0;
 	int m_lcount = 0;
 	
-	unsigned int vboId[2];
+	unsigned int vboId[3];
 	
 	void read_lines(const boost::filesystem::path &path);
 	void draw_snippet(int left, int top, int pc, double scale);

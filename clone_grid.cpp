@@ -35,6 +35,7 @@
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <parallel/algorithm>
+#include <string>
 
 namespace fs = boost::filesystem;
 
@@ -76,17 +77,9 @@ void CloneGrid::read_source(const fs::path &path)
 
 void CloneGrid::print_statistics()
 {
-	int clones_0 = 0, clones_1 = 0, clones_2 = 0;
-	for (Lines &lineset : m_duplicates) {
-		clones_0 += 1;
-		clones_1 += 1 * lineset.size();
-		clones_2 += 1 * lineset.size() * lineset.size();
-	}
-	
 	std::cout << boost::format("Total size:  %.3f MiB\n") % (m_bytes / 1024. / 1024.);
 	std::cout << "Total LOC:   " << m_size << "\n";
 	std::cout << "Total files: " << m_files.size() << "\n";
-	std::cout << "Clones:      " << clones_0 << ":" << clones_1 << ":" << clones_2 << "\n";
 
 	std::size_t n = std::min(std::size_t(10), m_files.size());
 	std::cout << "\nTop-" << n << " biggest files:\n";
@@ -106,25 +99,50 @@ void CloneGrid::print_statistics()
 	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc)/m_size*100.);
 }
 
+typedef std::pair<int, int> IPoint;
+inline static IPoint align(const IPoint &p) { return IPoint(p.first - p.second, p.second); }
+inline static IPoint reset(const IPoint &p) { return IPoint(p.first + p.second, p.second); }
+inline static bool aligned(const IPoint &a, const IPoint &b)
+{ return a.first == b.first && a.second + 1 == b.second; }
+
 void CloneGrid::finalize()
 {
-	auto first = begin(m_lines);
-	auto last  = end(m_lines);
+	std::cout << "Find clones" << std::endl;
 	
-	__gnu_parallel::sort(first, last, [&] (const SourceLine &a, const SourceLine &b) {
+	size_t clones_0 = 0, clones_1 = 0;
+	std::vector<IPoint> points;
+	__gnu_parallel::sort(begin(m_lines), end(m_lines), [&] (const SourceLine &a, const SourceLine &b) {
 		return std::lexicographical_compare(a[0], a[m_runs], b[0], b[m_runs]);
 	});
-	
-	auto equal = [&] (const SourceLine &a, const SourceLine &b) {
-		return alg::equal(a[0], a[m_runs], b[0], b[m_runs]);
-	};
-	
-	auto p = std::make_pair(first, first);
-	while ((p = alg::adjacent_find_range(p.second, last, equal)).first != last)
-		if (p.second - p.first < 10)
-			m_duplicates.emplace_back(p.first, p.second);
+	alg::process_adjacent(begin(m_lines), end(m_lines),
+		[&] (const SourceLine &a, const SourceLine &b) {
+			return alg::equal(a[0], a[m_runs], b[0], b[m_runs]);
+		}, [] (Lines::iterator, Lines::iterator) {},
+		[&] (Lines::iterator first, Lines::iterator last) {
+			if (++last - first >= 10) return;
+			clones_0 += 1;
+			clones_1 += last - first;
+			for (auto i1 = first; i1 != last; ++i1)
+			for (auto i2 = first; i2 != last; ++i2)
+				points.push_back(align(IPoint(i1->position(), i2->position())));
+		}
+	);
 	
 	m_lines.clear();
+	std::cout << "Clones:      " << clones_0 << ":" << clones_1 << ":" << points.size() << "\n";
+	
+	std::cout << "Find runs" << std::endl;
+	typedef std::vector<IPoint>::iterator iterator;
+	__gnu_parallel::sort(begin(points), end(points));
+	alg::process_adjacent(begin(points), end(points), aligned,
+		[&] (iterator first, iterator last) {
+			std::transform(first, ++last, std::back_inserter(m_vertices), reset);
+		}, [&] (iterator first, iterator last) {
+			m_vlines.emplace_back(reset(*first), reset(*last));
+		}
+	);
+	
+	std::cout << "Done" << std::endl;
 }
 
 std::size_t CloneGrid::SourceFile::read()
@@ -175,7 +193,7 @@ void CloneGrid::read_lines(const fs::path &path)
 
 void CloneGrid::setup()
 {
-	glGenBuffers(2, vboId);
+	glGenBuffers(3, vboId);
 
 	// Setup file borders:
 	m_lcount = 2 * m_files.size() + 2;
@@ -193,22 +211,15 @@ void CloneGrid::setup()
 	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), 0, GL_STATIC_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), &vertices[0]);
-
-	// Setup clone dots:
 	vertices.clear();
 
-	for (Lines &lineset : m_duplicates)
-		for (SourceLine &line1 : lineset)
-		for (SourceLine &line2 : lineset) {
-			vertices.push_back(line1.m_file->m_position + line1.m_number);
-			vertices.push_back(line2.m_file->m_position + line2.m_number);
-			++m_clones;
-		}
-	m_duplicates.clear();
-
 	glBindBuffer(GL_ARRAY_BUFFER, vboId[1]);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), 0, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), &vertices[0]);
+	glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Point), 0, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size() * sizeof(Point), &m_vertices[0]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[2]);
+	glBufferData(GL_ARRAY_BUFFER, m_vlines.size() * sizeof(Line), 0, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, m_vlines.size() * sizeof(Line), &m_vlines[0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -250,31 +261,34 @@ void CloneGrid::draw(double scale, int width, int height, int px, int py)
 	py = m_size - py;
 	glTranslated(0, m_size, 0);
 	glScaled(1, -1, 1);
-	
+
 	// Draw file borders:
 	glColor4f(1, 0, 0, .6 * sqrt(scale));
-	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
 	glEnableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[0]);
 	glVertexPointer(2, GL_FLOAT, 0, 0);
 	glDrawArrays(GL_LINES, 0, m_lcount * 2);
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Draw blue diagonal:
-	glBegin(GL_LINES);
 	glColor4f(0, 0, 1, 1);
-	glVertex2i(0, 0); glVertex2i(m_size, m_size);
-	glEnd();
-
-	// Draw clone dots:
-	glColor4f(1, 1, 1, sqrt(scale));
-	glBindBuffer(GL_ARRAY_BUFFER, vboId[1]);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(2, GL_FLOAT, 0, 0);
-	glDrawArrays(GL_POINTS, 0, m_clones);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
+	glBegin(GL_LINES); glVertex2i(0, 0); glVertex2i(m_size, m_size); glEnd();
+
+	// Draw clone dots:
+	glColor4f(1, 1, 1, sqrt(sqrt(scale)));
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[1]);
+	glVertexPointer(2, GL_FLOAT, 0, 0);
+	glDrawArrays(GL_POINTS, 0, m_vertices.size());
+
+	// Draw clone lines:
+	glBindBuffer(GL_ARRAY_BUFFER, vboId[2]);
+	glVertexPointer(2, GL_FLOAT, 0, 0);
+	glDrawArrays(GL_LINES, 0, m_vlines.size() * 2);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	// Draw code snippets:
 	int margin = 20;
 	glLoadIdentity();
