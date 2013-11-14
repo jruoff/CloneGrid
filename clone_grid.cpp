@@ -27,15 +27,14 @@
 
 #include "clone_grid.h"
 #include "algorithm_ext.h"
+#include "sourcefile.h"
 
-#include <fstream>
 #include <GL/glut.h>
 #include <boost/format.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <parallel/algorithm>
-#include <string>
 
 namespace fs = boost::filesystem;
 
@@ -145,30 +144,7 @@ void CloneGrid::finalize()
 	std::cout << "Done" << std::endl;
 }
 
-std::size_t CloneGrid::SourceFile::read()
-{
-	std::size_t size = fs::file_size(m_path);
-	std::ifstream ifs(m_path.string());
-	std::istreambuf_iterator<char> first(ifs), last;
-	m_data.reserve(size);
-	m_data.assign(first, last);
-	
-	auto it = begin(m_data);
-	m_index.push_back(it);
-	while ((it = std::find(it, end(m_data), '\n')) != end(m_data))
-		m_index.push_back(++it);
-	
-	m_index.push_back(end(m_data));
-	
-	return size;
-}
-
-std::ostream &operator<<(std::ostream &out, const CloneGrid::SourceFile &file)
-{
-	return out << boost::format("%5d: %s\n") % file.line_count() % file.m_path;
-}
-
-CloneGrid::SourceFile *CloneGrid::get_file(int position)
+SourceFile *CloneGrid::get_file(int position)
 {
 	if (position < 0 || position >= m_size) return nullptr;
 	

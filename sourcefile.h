@@ -23,56 +23,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef SOURCEFILE_H
+#define SOURCEFILE_H
 
-#ifndef CLONE_GRID_H
-#define CLONE_GRID_H
-
-#include "idrawable.h"
 #include <boost/filesystem.hpp>
-#include <FTGL/ftgl.h>
 
-class SourceFile;
-class SourceLine;
-
-class CloneGrid : public virtual IDrawable
-{
-public:
-	CloneGrid(int runs = 4);
-	virtual ~CloneGrid();
+struct SourceFile {
+	SourceFile(const boost::filesystem::path &path, int position)
+		: m_path(path), m_position(position) {}
 	
-	// Implement IDrawable
-	virtual void draw(double scale, int width, int height, int px, int py);
-	virtual double size() { return m_size; }
+	std::size_t read();
+	std::size_t line_count() const { return m_index.size() - 1; }
+	std::string::const_iterator line(int i) const { return m_index[i]; }
 	
-	void read_source(const boost::filesystem::path &path);
-	void print_statistics();
-	void finalize();
-	void setup();
+	std::vector<std::string::const_iterator> m_index;
+	std::string m_data;
+	boost::filesystem::path m_path;
+	int m_position;
 	
-private:
-	typedef std::vector<SourceFile *> Files;
-	typedef std::vector<SourceLine> Lines;
-	typedef std::pair<float, float> Point;
-	typedef std::pair<Point, Point> Line;
-	
-	Files m_files;
-	Lines m_lines;
-	std::vector<Point> m_vertices;
-	std::vector<Line> m_vlines;
-	
-	SourceFile *get_file(int position);
-	
-	int m_runs;
-	int m_size   = 0;
-	int m_bytes  = 0;
-	int m_lcount = 0;
-	
-	unsigned int vboId[3];
-	
-	void read_lines(const boost::filesystem::path &path);
-	void draw_snippet(int left, int top, int pc, double scale);
-	
-	FTTextureFont m_font;
+	friend std::ostream &operator<<(std::ostream &out, const SourceFile &file);
 };
 
-#endif // CLONE_GRID_H
+struct SourceLine {
+	SourceLine(SourceFile *file, int number)
+		: m_file(file), m_number(number) {}
+	
+	int position() const { return m_file->m_position + m_number; }
+	std::string::const_iterator operator[](int i) const
+	{ return m_file->line(m_number + i); }
+	
+	SourceFile *m_file;
+	int m_number;
+};
+
+#endif // SOURCEFILE_H

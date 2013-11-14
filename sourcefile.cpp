@@ -23,56 +23,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "sourcefile.h"
 
-#ifndef CLONE_GRID_H
-#define CLONE_GRID_H
+#include <boost/format.hpp>
+#include <fstream>
 
-#include "idrawable.h"
-#include <boost/filesystem.hpp>
-#include <FTGL/ftgl.h>
+namespace fs = boost::filesystem;
 
-class SourceFile;
-class SourceLine;
-
-class CloneGrid : public virtual IDrawable
+std::size_t SourceFile::read()
 {
-public:
-	CloneGrid(int runs = 4);
-	virtual ~CloneGrid();
+	std::size_t size = fs::file_size(m_path);
+	std::ifstream ifs(m_path.string());
+	std::istreambuf_iterator<char> first(ifs), last;
+	m_data.reserve(size);
+	m_data.assign(first, last);
 	
-	// Implement IDrawable
-	virtual void draw(double scale, int width, int height, int px, int py);
-	virtual double size() { return m_size; }
+	auto it = begin(m_data);
+	m_index.push_back(it);
+	while ((it = std::find(it, end(m_data), '\n')) != end(m_data))
+		m_index.push_back(++it);
 	
-	void read_source(const boost::filesystem::path &path);
-	void print_statistics();
-	void finalize();
-	void setup();
+	m_index.push_back(end(m_data));
 	
-private:
-	typedef std::vector<SourceFile *> Files;
-	typedef std::vector<SourceLine> Lines;
-	typedef std::pair<float, float> Point;
-	typedef std::pair<Point, Point> Line;
-	
-	Files m_files;
-	Lines m_lines;
-	std::vector<Point> m_vertices;
-	std::vector<Line> m_vlines;
-	
-	SourceFile *get_file(int position);
-	
-	int m_runs;
-	int m_size   = 0;
-	int m_bytes  = 0;
-	int m_lcount = 0;
-	
-	unsigned int vboId[3];
-	
-	void read_lines(const boost::filesystem::path &path);
-	void draw_snippet(int left, int top, int pc, double scale);
-	
-	FTTextureFont m_font;
-};
+	return size;
+}
 
-#endif // CLONE_GRID_H
+std::ostream &operator<<(std::ostream &out, const SourceFile &file)
+{
+	return out << boost::format("%5d: %s\n") % file.line_count() % file.m_path;
+}
