@@ -95,7 +95,7 @@ void CloneGrid::print_statistics()
 		std::cout << *files_sorted[i];
 	}
 	
-	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc)/m_size*100.);
+	std::cout << boost::format("LOC: %d (%.3f%%)\n\n") % tloc % (double(tloc) / m_size * 100.);
 }
 
 typedef std::pair<int, int> IPoint;
@@ -129,6 +129,7 @@ void CloneGrid::finalize()
 	
 	m_lines.clear();
 	std::cout << "Clones:      " << clones_0 << ":" << clones_1 << ":" << points.size() << "\n";
+	std::cout << boost::format("Redundancy:  %.3f%%\n")  % (double(clones_1 - clones_0) / m_size * 100.);
 	
 	std::cout << "Find runs" << std::endl;
 	typedef std::vector<IPoint>::iterator iterator;
