@@ -31,10 +31,10 @@
 
 namespace alg {
 
-template<typename RAIterator1, typename RAIterator2>
-bool equal(RAIterator1 first1, RAIterator1 last1, RAIterator2 first2, RAIterator2 last2)
+template<typename FIterator1, typename FIterator2>
+bool equal(FIterator1 first1, FIterator1 last1, FIterator2 first2, FIterator2 last2)
 {
-	if (last1 - first1 != last2 - first2) return false;
+	if (std::distance(first1, last1) != std::distance(first2, last2)) return false;
 	return std::equal(first1, last1, first2);
 }
 
@@ -46,21 +46,16 @@ bool adjacent_range(FIterator &first, FIterator &second, FIterator last, BinaryP
 	return false;
 }
 
-template<typename FIterator, typename BinaryPredicate>
-bool adjacent_range_not(FIterator &first, FIterator &second, FIterator last, BinaryPredicate p)
-{
-	if (second == last) return true;
-	do first = second; while (++second != last &&  p(*first, *second));
-	return false;
-}
-
 template<typename FIterator, typename BP, typename A1, typename A2>
 void process_adjacent(FIterator first, FIterator last, BP p, A1 not_p, A2 are_p)
 {
+	typedef typename std::iterator_traits<FIterator>::value_type T;
+	auto ip = [p] (const T &a, const T &b) { return !p(a, b); };
+	
 	while (true) {
 		FIterator a, b = first;
-		if (alg::adjacent_range    (a, first, last, p)) break; not_p(b, a);
-		if (alg::adjacent_range_not(b, first, last, p)) break; are_p(a, b);
+		if (alg::adjacent_range(a, first, last,  p)) break; not_p(b, a);
+		if (alg::adjacent_range(b, first, last, ip)) break; are_p(a, b);
 	}
 }
 
