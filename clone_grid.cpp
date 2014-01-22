@@ -218,7 +218,7 @@ void CloneGrid::draw_snippet(int left, int top, int pc, double scale)
 	double a = sqrt(std::max(.0, 1.5 * scale - .5));
 	int p = file->m_position - pc;
 	int first = std::max(- lines, p);
-	int last  = std::min(  lines, p + int(file->line_count()) - 1);
+	int last  = std::min(  lines, p + int(file->line_count()) - 1) + 1;
 
 	while (first != last) {
 		glColor4f(.5, 1, .5, a * std::min((lines + 1. - std::abs(first)) / n, 1.));
