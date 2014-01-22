@@ -112,7 +112,7 @@ static void display()
 
 	glColor4f(0, 1, 1, .2);
 	glVertex2i(- s_window_width / 2, 0); glVertex2i(s_window_width / 2, 0);
-	glVertex2i(0, - s_window_height / 2); glVertex2i(0, s_window_width / 2);
+	glVertex2i(0, - s_window_height / 2); glVertex2i(0, s_window_height / 2);
 
 	glEnd();
 
