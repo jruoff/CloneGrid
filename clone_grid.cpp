@@ -67,7 +67,7 @@ void CloneGrid::read_source(const fs::path &path)
 				it->symlink_status().type() == fs::regular_file &&
 				boost::regex_match(it->path().string(), include)
 			)
-				read_lines(it->path());
+				read_lines(path, it->path());
 		
 	} catch (fs::filesystem_error &e) {
 		std::cerr << e.what() << "\n";
@@ -155,9 +155,12 @@ SourceFile *CloneGrid::get_file(int position)
 	) - 1);
 }
 
-void CloneGrid::read_lines(const fs::path &path)
+void CloneGrid::read_lines(const fs::path &root, const fs::path &path)
 {
-	SourceFile *file = new SourceFile(path, m_size);
+	SourceFile *file = new SourceFile(path, std::string(
+		begin(path.string()) + root.string().size(),
+		end  (path.string())
+	), m_size);
 	m_files.push_back(file);
 	m_bytes += file->read();
 	std::cout << *file;
@@ -209,7 +212,7 @@ void CloneGrid::draw_snippet(int left, int top, int pc, double scale)
 
 	if (!file) return;
 	glColor4f(.5, 1, .5, 1);
-	m_font.Render(file->m_path.c_str(), -1, FTPoint(left, top - font_size));
+	m_font.Render(file->m_name.c_str(), -1, FTPoint(left, top - font_size));
 
 	if (scale <= 1/3.) return;
 	double a = sqrt(std::max(.0, 1.5 * scale - .5));

@@ -29,8 +29,8 @@
 #include <boost/filesystem.hpp>
 
 struct SourceFile {
-	SourceFile(const boost::filesystem::path &path, int position)
-		: m_path(path), m_position(position) {}
+	SourceFile(const boost::filesystem::path &path, const std::string &name, int position)
+		: m_path(path), m_name(name), m_position(position) {}
 	
 	std::size_t read();
 	std::size_t line_count() const { return m_index.size() - 1; }
@@ -39,6 +39,7 @@ struct SourceFile {
 	std::vector<std::string::const_iterator> m_index;
 	std::string m_data;
 	boost::filesystem::path m_path;
+	std::string m_name;
 	int m_position;
 	
 	friend std::ostream &operator<<(std::ostream &out, const SourceFile &file);

@@ -69,7 +69,7 @@ private:
 	
 	unsigned int vboId[3];
 	
-	void read_lines(const boost::filesystem::path &path);
+	void read_lines(const boost::filesystem::path &root, const boost::filesystem::path &path);
 	void draw_snippet(int left, int top, int pc, double scale);
 	
 	FTTextureFont m_font;

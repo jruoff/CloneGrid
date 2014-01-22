@@ -50,5 +50,5 @@ std::size_t SourceFile::read()
 
 std::ostream &operator<<(std::ostream &out, const SourceFile &file)
 {
-	return out << boost::format("%5d: %s\n") % file.line_count() % file.m_path;
+	return out << boost::format("%5d: %s\n") % file.line_count() % file.m_name;
 }
