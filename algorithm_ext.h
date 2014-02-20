@@ -46,16 +46,28 @@ bool adjacent_range(FIterator &first, FIterator &second, FIterator last, BinaryP
 	return false;
 }
 
+template<typename Predicate>
+struct not_functor
+{
+	Predicate p;
+
+	template<typename... Arg>
+	inline auto operator()(Arg&&... arg) ->
+	decltype(!p(std::forward<Arg>(arg)...))
+	{ return !p(std::forward<Arg>(arg)...); }
+};
+
+template<typename Predicate>
+inline not_functor<Predicate> notp(Predicate p)
+{ return not_functor<Predicate>{p}; }
+
 template<typename FIterator, typename BP, typename A1, typename A2>
 void process_adjacent(FIterator first, FIterator last, BP p, A1 not_p, A2 are_p)
 {
-	typedef typename std::iterator_traits<FIterator>::value_type T;
-	auto ip = [p] (const T &a, const T &b) { return !p(a, b); };
-	
 	while (true) {
 		FIterator a, b = first;
-		if (alg::adjacent_range(a, first, last,  p)) break; not_p(b, a);
-		if (alg::adjacent_range(b, first, last, ip)) break; are_p(a, b);
+		if (alg::adjacent_range(a, first, last,      p )) break; not_p(b, a);
+		if (alg::adjacent_range(b, first, last, notp(p))) break; are_p(a, b);
 	}
 }
 
